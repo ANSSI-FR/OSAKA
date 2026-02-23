@@ -16,7 +16,11 @@ def services(data, driver):
             if 'loadBalancerIP' in service["spec"]:
                 lbip = service["spec"]["loadBalancerIP"]
             elif 'ingress' in service["status"]["loadBalancer"]:
-                lbip = service["status"]["loadBalancer"]["ingress"][0]["ip"]
+                ingress = service["status"]["loadBalancer"]["ingress"][0]
+                if "ip" in ingress:
+                    lbip = ingress["ip"]
+                elif "hostname" in ingress:
+                    lbip = ingress["hostname"]
 
             query = """
             CREATE (s:Services { Name : $name, Type : $type, Namespace : $ns, ClusterIP : $clusterip, 
@@ -26,9 +30,9 @@ def services(data, driver):
                                  name=service["metadata"]["name"],
                                  type=service["spec"]["type"],
                                  ns=service["metadata"]["namespace"],
-                                 clusterip=service["spec"]["clusterIP"],
+                                 clusterip=service["spec"]["clusterIP"] if "clusterIP" in service["spec"] else None,
                                  lbip=lbip,
-                                 selector=json.dumps(service["spec"]["selector"], indent=2),
+                                 selector=json.dumps(service["spec"].get("selector", {}), indent=2),
                                  ports=json.dumps(service["spec"]["ports"][0], indent=2))
 
         else:
@@ -41,8 +45,8 @@ def services(data, driver):
                                      name=service["metadata"]["name"],
                                      type=service["spec"]["type"],
                                      ns=service["metadata"]["namespace"],
-                                     clusterip=service["spec"]["clusterIP"],
-                                     selector=json.dumps(service["spec"]["selector"]),
+                                     clusterip=service["spec"]["clusterIP"] if "clusterIP" in service["spec"] else None,
+                                     selector=json.dumps(service["spec"].get("selector", {})),
                                      ports=json.dumps(service["spec"]["ports"], indent=2))
             else:
                 query = """
@@ -53,7 +57,7 @@ def services(data, driver):
                                      name=service["metadata"]["name"],
                                      type=service["spec"]["type"],
                                      ns=service["metadata"]["namespace"],
-                                     clusterip=service["spec"]["clusterIP"],
+                                     clusterip=service["spec"]["clusterIP"] if "clusterIP" in service["spec"] else None,
                                      ports=json.dumps(service["spec"]["ports"], indent=2))
 
 
